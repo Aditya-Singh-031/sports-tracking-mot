@@ -205,3 +205,34 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+# Large data files
+data/cricket/*.mp4
+data/football/*.mp4
+data/cricket/*.avi
+data/football/*.avi
+data/**/*.mkv
+
+# Model weights
+models/*.pt
+models/*.pth
+models/*.onnx
+
+# Output videos (too large for git)
+outputs/**/*.mp4
+outputs/**/*.avi
+
+# Python environments
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
