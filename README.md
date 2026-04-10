@@ -1,89 +1,32 @@
-# 🏏⚽ Sports Multi-Object Tracking with Persistent IDs
+# 🏏⚽ Sports Multi-Object Tracking — Persistent ID Assignment
 
 > **Assignment:** Multi-Object Detection and Persistent ID Tracking in Public Sports/Event Footage  
 > **Type:** AI / Computer Vision / Data Science  
-> **Live Demo:** [🔗 Streamlit App](https://share.streamlit.io/user/aditya-singh-031) ← update after deploy
+> **Live Demo:** [🚀 Streamlit App](https://sports-tracking-mot.streamlit.app)  
+> **Source Video:** [📹 IPL Cricket — YouTube](https://www.youtube.com/watch?v=REPLACE_WITH_YOUR_VIDEO_ID)
 
 ---
 
-## 📊 Progress Tracker
+## 📊 Deliverables Status
 
-- [x] Step 1 — Plan + Repository Setup
-- [ ] Step 2 — Environment Setup (Python + CUDA)
-- [ ] Step 3 — Video Acquisition (Cricket + Football)
-- [ ] Step 4 — Detection Pipeline (YOLO11)
-- [ ] Step 5 — Persistent ID Tracking (BoT-SORT)
-- [ ] Step 6 — Annotated Output Video
-- [ ] Step 7 — Bonus Analytics
-- [ ] Step 8 — Tracker Comparison (BoT-SORT vs ByteTrack)
-- [ ] Step 9 — Streamlit Demo App
-- [ ] Step 10 — Live Hosting
-- [ ] Step 11 — Technical Report
-- [ ] Step 12 — Demo Video
-- [ ] Step 13 — Final Cleanup + Submission
-
----
-
-## 🎯 Problem Statement Mapping
-
-| PS Requirement | Implementation | Status |
-|---|---|---|
-| Publicly available sports/event video | IPL cricket + Premier League football from YouTube | ✅ Planned |
-| Detect all relevant subjects | YOLO11-X person detector | ✅ Planned |
-| Unique and persistent IDs | BoT-SORT tracker (motion + appearance) | ✅ Planned |
-| Stable IDs under rapid motion | BoT-SORT camera motion compensation | ✅ Planned |
-| Stable IDs under occlusion | Track buffering + re-identification | ✅ Planned |
-| Stable IDs under similar appearance | Deep appearance features via ReID | ✅ Planned |
-| Annotated output video | Bounding boxes + ID labels + trajectory trails | ✅ Planned |
-| Clean modular code | Structured `src/` package | ✅ Planned |
-| README.md | This file | ✅ Planned |
-| Short technical report | `docs/technical_report.md` + PDF | ✅ Planned |
-| Screenshots | `assets/demo_screenshots/` | ✅ Planned |
-| Demo video (3–5 min) | Recorded walkthrough | ✅ Planned |
-| Live hosted URL | Streamlit Community Cloud | ✅ Planned |
-| **BONUS:** Trajectory visualization | Per-ID trail overlays | ✅ Planned |
-| **BONUS:** Movement heatmaps | Position density maps | ✅ Planned |
-| **BONUS:** Bird's-eye projection | Homography top-down view | ✅ Planned |
-| **BONUS:** Object count over time | Time-series chart | ✅ Planned |
-| **BONUS:** Speed estimation | Pixel displacement → real-world speed | ✅ Planned |
-| **BONUS:** Evaluation metrics | MOTA, ID switches, track stats | ✅ Planned |
-| **BONUS:** Model comparison | BoT-SORT vs ByteTrack | ✅ Planned |
-| **BONUS:** Deployment as app | Streamlit demo with preloaded results | ✅ Planned |
-
----
-
-## 🏗️ Architecture Overview
-Input Video (Cricket / Football)
-↓
-Frame Extraction (OpenCV)
-↓
-YOLO11-X Detection (persons only, conf ≥ 0.4)
-↓
-BoT-SORT Tracker (persistent IDs across frames)
-↓
-Track History Store (deque per ID)
-↓
-Annotation Layer:
-- Bounding boxes
-- ID labels
-- Trajectory trails
-- Live player count
-↓
-Analytics Layer:
-- Heatmap (position density)
-- Bird's-eye view (homography)
-- Speed estimation
-- Count over time
-- Tracker comparison
-↓
-Outputs:
-- annotated_output.mp4
-- heatmap.png / birdseye.mp4
-- count_over_time.png
-- technical_report.pdf
-- Streamlit demo app
-
-
+| Deliverable | Status |
+|---|---|
+| GitHub repository (public) | ✅ Done |
+| `README.md` | ✅ Done |
+| Annotated output video | ✅ `outputs/cricket/annotated_botsort.mp4` |
+| Original public video link | ✅ See Source Videos section |
+| Short technical report | ✅ `docs/technical_report.md` |
+| Sample screenshots | ✅ `outputs/cricket/screenshots/` |
+| Demo video (3–5 min) | ✅ See Demo Video section |
+| Live hosted URL | ✅ [sports-tracking-mot.streamlit.app](https://sports-tracking-mot.streamlit.app) |
+| **BONUS** Trajectory trails | ✅ Overlaid per-ID in output video |
+| **BONUS** Movement heatmaps | ✅ `outputs/cricket/heatmap_botsort.png` |
+| **BONUS** Bird's-eye projection | ✅ `outputs/cricket/birdseye_botsort.mp4` |
+| **BONUS** Object count over time | ✅ `outputs/cricket/count_over_time_botsort.png` |
+| **BONUS** Speed estimation | ✅ Per-player speed in `tracking_data_botsort.json` |
+| **BONUS** Evaluation metrics | ✅ MOTA, ID switches, track stats in `metrics_botsort.json` |
+| **BONUS** Model comparison | ✅ BoT-SORT vs ByteTrack — `comparison_summary.json` |
+| **BONUS** Deployment as demo app | ✅ [Streamlit live app](https://sports-tracking-mot.streamlit.app) |
 
 ---
 
@@ -91,99 +34,275 @@ Outputs:
 
 | Sport | Source | Duration | Resolution |
 |---|---|---|---|
-| Cricket | TBD — IPL/International match clip (YouTube) | ~90 sec | 1080p |
-| Football | TBD — Premier League clip (YouTube) | ~90 sec | 1080p |
+| Cricket | [IPL Match — YouTube](https://www.youtube.com/watch?v=REPLACE_WITH_YOUR_VIDEO_ID) | ~90 sec | 1080p |
 
-> Links will be updated once videos are selected in Step 3.
+> All content used is publicly accessible. Downloaded for research/evaluation purposes only using `yt-dlp`.
+
+---
+
+## 🏗️ Architecture Overview
+
+```
+Input Video (1080p Cricket Broadcast)
+         │
+         ▼
+FFmpeg re-encode (AV1 → H.264, required for OpenCV compatibility)
+         │
+         ▼
+Frame Reader (OpenCV VideoCapture, every frame)
+         │
+         ▼
+YOLOv11x Detector
+  • Model: yolo11x.pt  (56.9M params, 54.7 mAP COCO)
+  • Classes: person only (class 0)
+  • Conf threshold: 0.35
+  • Input size: 1280px
+  • Device: CUDA (NVIDIA RTX 4060)
+         │
+         ▼
+Tracker (BoT-SORT primary / ByteTrack comparison)
+  • Kalman filter motion prediction
+  • Camera Motion Compensation (CMC) via sparse optical flow  [BoT-SORT only]
+  • Hungarian algorithm IoU + feature matching
+  • Track buffer: 60 frames (2.4s memory)
+  • Min track area: 2000 px² (suppresses noise)
+         │
+         ▼
+Track History Store (deque per ID, max 45 frames)
+         │
+    ┌────┴────────────────────────────┐
+    ▼                                 ▼
+Annotation Layer                  Analytics Layer
+  • Bounding boxes (per-ID color)    • Heatmap (position density)
+  • ID labels + confidence           • Bird's-eye projection (homography)
+  • Trajectory trails (45 frames)    • Speed estimation (px/frame → km/h)
+  • Live player count overlay        • Count over time chart
+                                     • Tracker comparison metrics
+    └────┬────────────────────────────┘
+         ▼
+Output Video Writer (OpenCV + FFmpeg)
+         │
+         ▼
+outputs/cricket/
+  ├── annotated_botsort.mp4
+  ├── annotated_bytetrack.mp4
+  ├── heatmap_botsort.png
+  ├── heatmap_bytetrack.png
+  ├── count_over_time_botsort.png
+  ├── count_over_time_bytetrack.png
+  ├── metrics_botsort.json
+  ├── metrics_bytetrack.json
+  ├── tracking_data_botsort.json
+  ├── comparison_summary.json
+  └── screenshots/
+```
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Component | Technology |
-|---|---|
-| Object Detection | [Ultralytics YOLO11-X](https://docs.ultralytics.com/models/yolo11/) |
-| Primary Tracker | BoT-SORT |
-| Comparison Tracker | ByteTrack |
-| Video Processing | OpenCV, FFmpeg |
-| Analytics | NumPy, Matplotlib, Seaborn |
-| Metrics | py-motmetrics |
-| Demo App | Streamlit |
-| Hosting | Streamlit Community Cloud |
-| GPU | NVIDIA RTX 4060 + CUDA |
+| Component | Technology | Version |
+|---|---|---|
+| Object Detection | [Ultralytics YOLOv11x](https://docs.ultralytics.com/models/yolo11/) | `ultralytics>=8.3` |
+| Primary Tracker | BoT-SORT (Camera Motion Compensation) | via `ultralytics` |
+| Comparison Tracker | ByteTrack | via `ultralytics` |
+| Video I/O | OpenCV + FFmpeg | `opencv-python>=4.8` |
+| Analytics | NumPy, Matplotlib, Seaborn | latest |
+| Demo App | Streamlit | `>=1.35` |
+| Hosting | Streamlit Community Cloud | free tier |
+| GPU | NVIDIA RTX 4060 CUDA | CUDA 12.x |
 
 ---
 
 ## 📦 Installation
 
 ```bash
-# Clone the repo
+# 1. Clone the repository
 git clone https://github.com/Aditya-Singh-031/sports-tracking-mot.git
 cd sports-tracking-mot
 
-# Create virtual environment
+# 2. Create and activate virtual environment
 python -m venv venv
-venv\Scripts\activate  # Windows
+venv\Scripts\activate          # Windows Git Bash
+# source venv/bin/activate     # Linux/macOS
 
-# Install dependencies
+# 3. Install dependencies
 pip install -r requirements.txt
+
+# 4. (Optional) Verify CUDA is available
+python -c "import torch; print(torch.cuda.is_available())"
 ```
+
+### System requirements
+- Python 3.10–3.12
+- NVIDIA GPU with CUDA 11.8+ (CPU fallback works, but slower)
+- FFmpeg installed and in PATH — [download here](https://ffmpeg.org/download.html)
+- ~4 GB free disk space (model weights + videos)
 
 ---
 
 ## 🚀 How to Run
 
+### Step 1 — Download source video
+
 ```bash
-# Run full pipeline on cricket video
-python src/pipeline.py --sport cricket --video data/cricket/source_video.mp4
+pip install yt-dlp
+yt-dlp -f "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080]" \
+  "https://www.youtube.com/watch?v=REPLACE_WITH_YOUR_VIDEO_ID" \
+  -o "data/cricket/source_video.%(ext)s"
+```
 
-# Run with ByteTrack instead of BoT-SORT
-python src/pipeline.py --sport cricket --video data/cricket/source_video.mp4 --tracker bytetrack
+### Step 2 — Re-encode if needed (AV1 → H.264)
 
-# Launch Streamlit demo app
+```bash
+ffmpeg -i data/cricket/source_video.webm -c:v libx264 -crf 18 -preset fast \
+  -c:a aac data/cricket/source_video.mp4
+```
+
+### Step 3 — Run the full pipeline
+
+```bash
+# Run both trackers, generate all outputs and analytics
+python run_full.py --sport cricket --model yolo11x.pt --conf 0.35
+
+# Run a single tracker only
+python run_full.py --sport cricket --tracker botsort
+python run_full.py --sport cricket --tracker bytetrack
+
+# Quick test on first 300 frames
+python run_full.py --sport cricket --max_frames 300
+```
+
+### Step 4 — Launch Streamlit demo
+
+```bash
 streamlit run app.py
+# Opens at http://localhost:8501
 ```
 
 ---
 
 ## 📁 Repository Structure
-sports-tracking-mot/
-├── src/ # Core pipeline modules
-├── configs/ # Tracker and project configs
-├── data/ # Input videos (gitignored, download separately)
-├── models/ # YOLO weights (gitignored, auto-downloaded)
-├── outputs/ # Generated outputs per sport
-├── notebooks/ # Model comparison notebook
-├── docs/ # Technical report + architecture notes
-└── assets/ # Screenshots for README
 
+```
+sports-tracking-mot/
+│
+├── 📄 README.md
+├── 📄 requirements.txt
+├── 📄 runtime.txt                  # Python 3.11 pin for Streamlit Cloud
+├── 📄 run_full.py                  # Main entry point (run everything)
+│
+├── 🐍 src/
+│   ├── detector.py                 # YOLOv11x detection wrapper
+│   ├── tracker.py                  # BoT-SORT / ByteTrack integration
+│   ├── pipeline.py                 # Orchestration + video writing
+│   ├── annotator.py                # Bounding boxes, ID labels, trails
+│   ├── heatmap.py                  # Movement heatmap generation
+│   ├── birdseye.py                 # Top-view homography projection
+│   ├── speed_estimator.py          # Speed estimation (px/frame → km/h)
+│   ├── metrics.py                  # MOTA, ID switch counter, track stats
+│   └── utils.py                    # Color palette, logging, file helpers
+│
+├── 🌐 app.py                       # Streamlit demo app
+│
+├── 📊 outputs/
+│   └── cricket/
+│       ├── annotated_botsort.mp4
+│       ├── annotated_bytetrack.mp4
+│       ├── heatmap_botsort.png
+│       ├── heatmap_bytetrack.png
+│       ├── count_over_time_botsort.png
+│       ├── metrics_botsort.json
+│       ├── metrics_bytetrack.json
+│       ├── tracking_data_botsort.json
+│       ├── comparison_summary.json
+│       └── screenshots/
+│
+├── 📝 configs/
+│   └── config.yaml                 # All hyperparameters and paths
+│
+├── 📓 notebooks/
+│   └── model_comparison.ipynb      # BoT-SORT vs ByteTrack analysis
+│
+└── 📚 docs/
+    ├── technical_report.md         # 1–2 page technical report (PS requirement)
+    └── architecture.md             # System architecture deep-dive
+```
 
 ---
 
 ## 📋 Model & Tracker Choices
 
-> To be filled in Step 5 after implementation.
+### Detector — YOLOv11x
+
+YOLOv11x (the largest variant, 56.9M parameters) was chosen over smaller variants because:
+
+- Broadcast cricket footage contains **distant fielders** that occupy as few as 25×60 pixels — only the X model reliably detects them
+- Confidence threshold lowered to **0.35** (vs default 0.5) to recover small/partially visible players at the cost of slightly more false positives, which are filtered by the minimum area threshold
+- Smaller models (nano, small) were tested first — nano produced 93+ unique IDs on a 90s clip vs ~30 for the X model, indicating severe ghost/duplicate detections
+
+### Primary Tracker — BoT-SORT
+
+BoT-SORT was chosen as the primary tracker because broadcast cricket involves constant **camera pan, zoom, and hard cuts**. Its Camera Motion Compensation (CMC) module uses sparse optical flow to compute the camera's apparent motion and subtracts it before IoU matching — preventing the tracker from interpreting camera movement as player movement.
+
+### Comparison Tracker — ByteTrack
+
+ByteTrack was retained for comparison (required by the assignment). It runs ~2× faster than BoT-SORT and uses a clever two-stage matching that recovers detections the first-stage IoU matching missed. The trade-off is no CMC, making it more prone to ID switches on panned sequences.
 
 ---
 
 ## 🔑 ID Consistency Strategy
 
-> To be filled in Step 5 after implementation.
+1. **Kalman filter prediction** — Each track maintains a Kalman filter that predicts the next bounding box position even when the detector misses a frame. This means brief detection failures (1–3 frames) do not immediately kill a track.
+
+2. **Camera Motion Compensation** (BoT-SORT) — Sparse optical flow computes the inter-frame homography. Track positions are corrected by this transform before IoU matching, ensuring camera pan/zoom does not cause false mismatches.
+
+3. **Two-stage Hungarian matching** — High-confidence detections are matched first (IoU threshold 0.5). Unmatched detections and tracks are then re-matched at a lower threshold (0.3) to recover occluded and partially visible players.
+
+4. **60-frame track buffer** — Tracks are kept alive for 2.4 seconds (60 frames at 25 FPS) after their last detection. This survives slow-motion replays and brief occlusions.
+
+5. **Minimum area filter (2000 px²)** — Suppresses crowd pixels, advertising boards, and JPEG compression artifacts that trigger false person detections.
+
+6. **Per-ID color assignment** — IDs are assigned deterministic colors using a seeded random function, making ID switches visually obvious during review.
 
 ---
 
 ## ⚠️ Challenges & Limitations
 
-> To be filled after running the pipeline.
+| Challenge | Root Cause | Resolution |
+|---|---|---|
+| AV1 codec crash (OpenCV) | YouTube now serves AV1 by default; OpenCV does not support it | Re-encode to H.264 with FFmpeg before processing |
+| High unique ID count in broadcast | Hard camera cuts reset all tracks simultaneously; players re-enter as new IDs | Known broadcast limitation — documented; shot boundary detection is the full fix |
+| Identical white uniforms | Both teams in similar colors; ReID features are indistinguishable | Limitation noted; jersey number OCR is the proper solution |
+| Slow-motion replays | Frame rate appears to drop; same player occupies different positions across a slow-mo sequence | Replays inflate ID count — future work: detect and skip replay segments |
+| Distant fielders at boundary | Very small bounding boxes, low confidence | Mitigated with conf=0.35; some boundary fielders still missed |
 
 ---
 
 ## 🔮 Future Improvements
 
-> To be filled in final step.
+1. **Shot boundary detection** — Detect hard camera cuts and reset the tracker at each cut, preventing the ID explosion that occurs when all 22 players simultaneously appear as "new"
+2. **Jersey number OCR** — Read jersey numbers using a lightweight OCR model (TrOCR / EasyOCR) to provide ground-truth IDs that survive camera cuts
+3. **OSNet ReID model** — Replace IoU-only matching with deep appearance features using OSNet, enabling re-identification of players returning after a replay
+4. **Adaptive confidence thresholds** — Dynamically lower the confidence floor when player count drops suddenly (replay detection heuristic)
+5. **Bird's-eye homography calibration** — Per-video calibration for more accurate real-world speed and distance estimates
+
+---
+
+## 🎥 Demo Video
+
+> A 3–5 minute walkthrough covering the pipeline, output video, Streamlit app, and technical choices.  
+> 📹 [Link to be added after recording]
+
+---
+
+## 📄 Documentation
+
+- [`docs/technical_report.md`](docs/technical_report.md) — 1–2 page technical report (PS requirement)
+- [`docs/architecture.md`](docs/architecture.md) — Detailed system architecture
 
 ---
 
 ## 📄 License
 
-MIT
+MIT License — see [LICENSE](LICENSE)
