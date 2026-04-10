@@ -1,11 +1,17 @@
 import streamlit as st
 import json
 import os
-import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 import pandas as pd
+
+# cv2 is optional — only used for frame extraction from video
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -46,16 +52,13 @@ def load_json(path):
     return None
 
 
-def get_color(tid):
-    np.random.seed(int(tid) * 7 + 31)
-    r, g, b = np.random.randint(80, 255, 3)
-    return f"#{r:02x}{g:02x}{b:02x}"
-
-
 def load_outputs(sport, tracker):
     base = Path("outputs") / sport
     shots_dir = base / "screenshots"
     shots = sorted(shots_dir.glob(f"*_{tracker}.jpg")) if shots_dir.exists() else []
+    # also grab any jpg in screenshots if no tracker-specific ones found
+    if not shots and shots_dir.exists():
+        shots = sorted(shots_dir.glob("*.jpg"))[:6]
     return {
         "metrics":     load_json(base / f"metrics_{tracker}.json"),
         "data":        load_json(base / f"tracking_data_{tracker}.json"),
@@ -68,24 +71,29 @@ def load_outputs(sport, tracker):
 
 
 def frames_from_video(video_path, n=6):
-    cap = cv2.VideoCapture(str(video_path))
-    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    frames = []
-    for i in range(n):
-        fnum = int(total * (i + 0.5) / n)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, fnum)
-        ret, frame = cap.read()
-        if ret:
-            frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-    cap.release()
-    return frames
+    if not CV2_AVAILABLE:
+        return []
+    try:
+        cap = cv2.VideoCapture(str(video_path))
+        total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        frames = []
+        for i in range(n):
+            fnum = int(total * (i + 0.5) / n)
+            cap.set(cv2.CAP_PROP_POS_FRAMES, fnum)
+            ret, frame = cap.read()
+            if ret:
+                frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        cap.release()
+        return frames
+    except Exception:
+        return []
 
 
 def plot_speed_chart(data):
     speed_per_id = data.get("speed_per_id", {})
     if not speed_per_id:
         return None
-    ids  = list(speed_per_id.keys())[:30]   # cap at 30 for readability
+    ids  = list(speed_per_id.keys())[:30]
     maxs = [speed_per_id[i]["max_kmh"] for i in ids]
     avgs = [speed_per_id[i]["avg_kmh"] for i in ids]
     fig, ax = plt.subplots(figsize=(12, 4), dpi=110)
@@ -128,16 +136,16 @@ with st.sidebar:
 
 
 # ── LOAD DATA ─────────────────────────────────────────────────────────────────
-out      = load_outputs(sport, tracker)
-metrics  = out["metrics"]
-data     = out["data"]
-comp     = out["comparison"]
+out     = load_outputs(sport, tracker)
+metrics = out["metrics"]
+data    = out["data"]
+comp    = out["comparison"]
 
 # ── HEADER ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="main-header">
   <h1>🏏 Sports Player Tracker — Multi-Object Detection &amp; Persistent ID</h1>
-  <p>YOLOv11x &nbsp;·&nbsp; BoT-SORT + ByteTrack &nbsp;·&nbsp; Cricket Broadcast &nbsp;·&nbsp; 1920×1080 @ 25 FPS &nbsp;·&nbsp; RTX 4060 CUDA</p>
+  <p>YOLOv11x &nbsp;·&nbsp; BoT-SORT + ByteTrack &nbsp;·&nbsp; Cricket Broadcast &nbsp;·&nbsp; 1920×1080 @ 25 FPS &nbsp;·&nbsp; CUDA</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -154,15 +162,15 @@ tab_overview, tab_video, tab_heatmap, tab_speed, tab_compare, tab_report = tabs
 # ══════════════════════════════════════════════════════════════════
 with tab_overview:
     if not metrics:
-        st.warning("No results found for this tracker/sport combination.")
-        st.code("python run_full.py --sport cricket --model yolo11x.pt --conf 0.35")
+        st.warning("No results found for this tracker/sport combination. Results are loaded from pre-computed JSON files.")
+        st.code("Expected: outputs/cricket/metrics_botsort.json")
     else:
         c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("🎯 Unique IDs",        metrics.get("total_unique_ids", "—"))
-        c2.metric("📹 Total Frames",       metrics.get("total_frames", "—"))
-        c3.metric("👥 Avg Players/Frame",  metrics.get("avg_players_per_frame", "—"))
-        c4.metric("🔝 Max in Frame",       metrics.get("max_players_per_frame", "—"))
-        c5.metric("⚡ Avg FPS",            metrics.get("avg_processing_fps", "—"))
+        c1.metric("🎯 Unique IDs",       metrics.get("total_unique_ids", "—"))
+        c2.metric("📹 Total Frames",      metrics.get("total_frames", "—"))
+        c3.metric("👥 Avg Players/Frame", metrics.get("avg_players_per_frame", "—"))
+        c4.metric("🔝 Max in Frame",      metrics.get("max_players_per_frame", "—"))
+        c5.metric("⚡ Avg FPS",           metrics.get("avg_processing_fps", "—"))
 
         st.markdown("")
         col_a, col_b = st.columns(2)
@@ -180,10 +188,8 @@ with tab_overview:
                 if spd:
                     st.metric("Max Speed Detected", f"{spd.get('global_max_kmh', '—')} km/h")
                     st.metric("Global Average",      f"{spd.get('global_avg_kmh', '—')} km/h")
-                    st.metric("Fastest Player ID",   f"ID {spd.get('fastest_player_id', '—')}")
+                    st.metric("Fastest Player ID",   f"ID {spd.get('fastest_player_id', '?')}")
                     st.caption(spd.get("note", ""))
-                else:
-                    st.info("Speed data not available.")
 
             st.markdown("")
             st.markdown('<p class="section-header">📸 Sample Screenshots</p>', unsafe_allow_html=True)
@@ -191,9 +197,9 @@ with tab_overview:
             if shots:
                 cols = st.columns(3)
                 for col, shot in zip(cols, shots[:3]):
-                    col.image(str(shot), use_column_width=True)
+                    col.image(str(shot), use_container_width=True)
             else:
-                st.info("No screenshots found. Run pipeline first.")
+                st.info("No screenshots found in outputs/cricket/screenshots/")
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -213,17 +219,26 @@ with tab_video:
         c2.info("📍 Label = ID number")
         c3.warning("〰️ Trail = movement history")
 
-        st.markdown("")
-        st.markdown('<p class="section-header">🖼️ Frame Samples</p>', unsafe_allow_html=True)
-        with st.spinner("Extracting frames..."):
-            frames = frames_from_video(str(video_path), n=6)
-        if frames:
-            cols = st.columns(3)
-            for i, frame in enumerate(frames):
-                cols[i % 3].image(frame, use_column_width=True, caption=f"Frame sample {i+1}")
+        # Frame extraction only if cv2 is available
+        if CV2_AVAILABLE:
+            st.markdown("")
+            st.markdown('<p class="section-header">🖼️ Frame Samples</p>', unsafe_allow_html=True)
+            with st.spinner("Extracting frames..."):
+                frames = frames_from_video(str(video_path), n=6)
+            if frames:
+                cols = st.columns(3)
+                for i, frame in enumerate(frames):
+                    cols[i % 3].image(frame, use_container_width=True, caption=f"Frame sample {i+1}")
+        else:
+            shots = out["screenshots"]
+            if shots:
+                st.markdown('<p class="section-header">🖼️ Frame Samples (Screenshots)</p>', unsafe_allow_html=True)
+                cols = st.columns(3)
+                for i, shot in enumerate(shots[:6]):
+                    cols[i % 3].image(str(shot), use_container_width=True, caption=f"Screenshot {i+1}")
     else:
         st.warning(f"Video not found: `{video_path}`")
-        st.code("python run_full.py --sport cricket --model yolo11x.pt --conf 0.35")
+        st.markdown('<div class="warn-box">Large video files are typically excluded from git repos. Commit the video or host it externally.</div>', unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -234,18 +249,18 @@ with tab_heatmap:
     with cl:
         st.markdown('<p class="section-header">🌡️ Movement Heatmap</p>', unsafe_allow_html=True)
         if Path(out["heatmap"]).exists():
-            st.image(str(out["heatmap"]), use_column_width=True)
+            st.image(str(out["heatmap"]), use_container_width=True)
             st.caption("Cumulative player position density. Brighter = more time spent in that zone.")
         else:
-            st.info("Heatmap not found.")
+            st.info(f"Heatmap not found: {out['heatmap']}")
 
     with cr:
         st.markdown('<p class="section-header">📈 Player Count Over Time</p>', unsafe_allow_html=True)
         if Path(out["count_chart"]).exists():
-            st.image(str(out["count_chart"]), use_column_width=True)
+            st.image(str(out["count_chart"]), use_container_width=True)
             st.caption("Players tracked per frame. Zero-count frames = scoreboards/replays/transitions.")
         else:
-            st.info("Count chart not found.")
+            st.info(f"Count chart not found: {out['count_chart']}")
 
     if data:
         cot = data.get("count_over_time", [])
@@ -293,7 +308,7 @@ with tab_speed:
             ]).sort_values("Max Speed (km/h)", ascending=False).reset_index(drop=True)
             st.dataframe(df_spd, use_container_width=True, height=280)
     else:
-        st.warning("No tracking data found.")
+        st.warning("No tracking data JSON found.")
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -307,12 +322,12 @@ with tab_compare:
         bt = comp.get("bytetrack", {})
 
         rows = [
-            ("Total Unique IDs",           bs.get("total_unique_ids"),           bt.get("total_unique_ids")),
-            ("ID Switches (approx.)",      bs.get("id_switches_approx"),         bt.get("id_switches_approx")),
-            ("Avg Players / Frame",        bs.get("avg_players_per_frame"),      bt.get("avg_players_per_frame")),
-            ("Max Players in Frame",       bs.get("max_players_per_frame"),      bt.get("max_players_per_frame")),
-            ("Frames with 0 Detections",   bs.get("frames_with_no_detection"),   bt.get("frames_with_no_detection")),
-            ("Avg Processing FPS",         bs.get("avg_processing_fps"),         bt.get("avg_processing_fps")),
+            ("Total Unique IDs",         bs.get("total_unique_ids"),          bt.get("total_unique_ids")),
+            ("ID Switches (approx.)",    bs.get("id_switches_approx"),        bt.get("id_switches_approx")),
+            ("Avg Players / Frame",      bs.get("avg_players_per_frame"),     bt.get("avg_players_per_frame")),
+            ("Max Players in Frame",     bs.get("max_players_per_frame"),     bt.get("max_players_per_frame")),
+            ("Frames with 0 Detections", bs.get("frames_with_no_detection"),  bt.get("frames_with_no_detection")),
+            ("Avg Processing FPS",       bs.get("avg_processing_fps"),        bt.get("avg_processing_fps")),
         ]
         df_comp = pd.DataFrame(rows, columns=["Metric", "BoT-SORT", "ByteTrack"])
         st.dataframe(df_comp, use_container_width=True, hide_index=True)
@@ -325,14 +340,14 @@ with tab_compare:
 - Camera Motion Compensation via sparse optical flow
 - Fewer ID switches on broadcast footage with pan/zoom
 - Kalman filter survives brief occlusions
-- **Trade-off:** ~16 FPS (slower)
+- **Trade-off:** Slightly slower (~16 FPS)
 """)
         with c2:
             st.markdown("#### ⚡ ByteTrack — Fast")
             st.markdown("""
-- ~2× faster than BoT-SORT (30 FPS)
+- ~2× faster than BoT-SORT (~30 FPS)
 - Two-stage association recovers low-confidence detections
-- Better suited for real-time deployment
+- Better for real-time deployment
 - **Trade-off:** No camera motion compensation
 """)
 
@@ -341,18 +356,18 @@ with tab_compare:
         h1 = Path(f"outputs/{sport}/heatmap_botsort.png")
         h2 = Path(f"outputs/{sport}/heatmap_bytetrack.png")
         c1, c2 = st.columns(2)
-        if h1.exists(): c1.image(str(h1), caption="BoT-SORT heatmap", use_column_width=True)
-        if h2.exists(): c2.image(str(h2), caption="ByteTrack heatmap", use_column_width=True)
+        if h1.exists(): c1.image(str(h1), caption="BoT-SORT heatmap", use_container_width=True)
+        if h2.exists(): c2.image(str(h2), caption="ByteTrack heatmap", use_container_width=True)
 
         st.markdown("")
         st.markdown('<p class="section-header">📈 Side-by-Side Count Charts</p>', unsafe_allow_html=True)
         cc1 = Path(f"outputs/{sport}/count_over_time_botsort.png")
         cc2 = Path(f"outputs/{sport}/count_over_time_bytetrack.png")
         c1, c2 = st.columns(2)
-        if cc1.exists(): c1.image(str(cc1), caption="BoT-SORT count over time", use_column_width=True)
-        if cc2.exists(): c2.image(str(cc2), caption="ByteTrack count over time", use_column_width=True)
+        if cc1.exists(): c1.image(str(cc1), caption="BoT-SORT count over time", use_container_width=True)
+        if cc2.exists(): c2.image(str(cc2), caption="ByteTrack count over time", use_container_width=True)
     else:
-        st.info("Run both trackers first: `python run_full.py --sport cricket`")
+        st.info("Run both trackers and commit `outputs/cricket/comparison_summary.json`")
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -364,52 +379,50 @@ with tab_report:
     st.markdown("""
 ### 🔍 Model / Detector — YOLOv11x
 The largest YOLOv11 variant (56.9M parameters, 54.7 mAP COCO) was selected for maximum accuracy on
-1080p broadcast footage where distant fielders occupy as few as 25×60 pixels. Smaller variants (nano, small)
-were tested first but produced unacceptable ghost detection rates.
+1080p broadcast footage where distant fielders occupy as few as 25×60 pixels.
 
 ### 🎯 Tracking Algorithm — BoT-SORT + ByteTrack
 **BoT-SORT** combines Kalman filter motion prediction, Hungarian algorithm assignment, and sparse optical
-flow camera motion compensation (CMC). CMC is critical for broadcast cricket which involves constant pan and zoom.
+flow camera motion compensation (CMC) — critical for broadcast cricket with constant pan and zoom.
 
-**ByteTrack** uses every detection (including low-confidence) in a two-stage matching process. Faster than
-BoT-SORT but lacks CMC, leading to more ID switches on panned sequences.
+**ByteTrack** uses a two-stage matching process with every detection including low-confidence ones.
+Faster than BoT-SORT but lacks CMC, leading to more ID switches on panned sequences.
 
 ### ✅ Why This Combination
-- YOLOv11x over smaller variants: nano model produced 93 IDs in test; X model is substantially cleaner
-- BoT-SORT as primary: CMC correctly separates camera displacement from player motion before IoU matching
-- ByteTrack retained as comparison for the assignment's model comparison requirement
+- YOLOv11x over smaller variants: best accuracy for small distant players in broadcast
+- BoT-SORT as primary: CMC correctly separates camera displacement from player motion
+- ByteTrack retained for comparison (required by assignment)
 
 ### 🔒 ID Consistency Strategy
-1. **Kalman filter prediction** — maintains track position during missed frames
-2. **Camera motion compensation** (BoT-SORT only) — optical flow corrects for pan/zoom
-3. **Two-stage Hungarian matching** — recovers occluded and low-confidence detections
-4. **60-frame track buffer** — 2.4 seconds of memory survives camera cuts
-5. **Min area filter 2000 px²** — suppresses crowd noise and compression artifacts
+1. Kalman filter prediction — maintains track position during missed frames
+2. Camera motion compensation (BoT-SORT) — optical flow corrects for pan/zoom
+3. Two-stage Hungarian matching — recovers occluded detections
+4. 60-frame track buffer — 2.4 seconds of memory survives short camera cuts
+5. Min area filter 2000 px² — suppresses crowd noise and compression artifacts
 
 ### ⚠️ Challenges & Failure Cases
-| Challenge | Impact | Resolution |
-|-----------|--------|------------|
+
+| Challenge | Impact | Status |
+|---|---|---|
 | AV1 codec (OpenCV incompatible) | Pipeline blocked | ✅ FFmpeg H.264 re-encode |
-| Hard camera cuts in broadcast | Major ID explosion | ⚠️ Inherent to broadcast — documented |
+| Hard camera cuts in broadcast | ID explosion | ⚠️ Inherent — documented |
 | Identical white uniforms | ReID ineffective | ⚠️ Known limitation |
 | Slow-motion replays | Duplicate IDs | ⚠️ Shot boundary detection needed |
 | Distant fielders (small bbox) | Low confidence | ✅ conf=0.35 + min area filter |
 
 ### 🚀 Possible Improvements
-1. **Jersey number OCR** for cross-cut re-identification
-2. **Shot boundary detection** to reset tracker at camera cuts
-3. **Bird's-eye homography** for stable coordinate tracking
-4. **OSNet ReID model** for appearance-based re-ID
-5. **Track buffer 125 frames** to survive full replay sequences
+1. Jersey number OCR for cross-cut re-identification
+2. Shot boundary detection to reset tracker at hard cuts
+3. OSNet ReID model for appearance-based re-ID
+4. Longer track buffer (125 frames) to survive full replay sequences
+5. Bird's-eye homography for stable coordinate space tracking
 """)
 
     report_path = Path("technical_report.md")
     if report_path.exists():
         st.download_button(
-            "📥 Download Full Technical Report (Markdown)",
+            "📥 Download Full Technical Report",
             data=report_path.read_text(encoding="utf-8"),
             file_name="technical_report.md",
             mime="text/markdown",
         )
-    else:
-        st.info("technical_report.md not found in project root.")
