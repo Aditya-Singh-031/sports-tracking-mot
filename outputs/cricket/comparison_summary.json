@@ -1,0 +1,24 @@
+{
+  "botsort": {
+    "tracker": "botsort",
+    "sport": "cricket",
+    "total_frames": 2147,
+    "total_unique_ids": 181,
+    "id_switches_approx": 177,
+    "avg_players_per_frame": 2.07,
+    "max_players_per_frame": 11,
+    "frames_with_no_detection": 511,
+    "avg_processing_fps": 16.83
+  },
+  "bytetrack": {
+    "tracker": "bytetrack",
+    "sport": "cricket",
+    "total_frames": 2147,
+    "total_unique_ids": 184,
+    "id_switches_approx": 180,
+    "avg_players_per_frame": 2.04,
+    "max_players_per_frame": 10,
+    "frames_with_no_detection": 528,
+    "avg_processing_fps": 30.43
+  }
+}

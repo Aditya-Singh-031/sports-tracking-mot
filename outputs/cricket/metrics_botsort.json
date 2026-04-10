@@ -1,0 +1,11 @@
+{
+  "tracker": "botsort",
+  "sport": "cricket",
+  "total_frames": 2147,
+  "total_unique_ids": 181,
+  "id_switches_approx": 177,
+  "avg_players_per_frame": 2.07,
+  "max_players_per_frame": 11,
+  "frames_with_no_detection": 511,
+  "avg_processing_fps": 16.83
+}

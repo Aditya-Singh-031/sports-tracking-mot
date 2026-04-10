@@ -236,3 +236,8 @@ __pycache__/
 # OS files
 .DS_Store
 Thumbs.db
+
+data/cricket/source_video_av1_backup.mp4
+data/cricket/source_video_full.mp4
+outputs/cricket/annotated_*.mp4
+*.pt
