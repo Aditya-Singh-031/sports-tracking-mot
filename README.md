@@ -3,7 +3,7 @@
 > **Assignment:** Multi-Object Detection and Persistent ID Tracking in Public Sports/Event Footage  
 > **Type:** AI / Computer Vision / Data Science  
 > **Live Demo:** [🚀 Streamlit App](https://sports-tracking-mot.streamlit.app)  
-> **Source Video:** [📹 IPL Cricket — YouTube](https://www.youtube.com/watch?v=REPLACE_WITH_YOUR_VIDEO_ID)
+> **Source Video:** [📹 IPL Cricket — YouTube](https://youtu.be/-aPONfxjk_4?si=8gtDtEo65zPaRvLF)
 
 ---
 
@@ -34,7 +34,7 @@
 
 | Sport | Source | Duration | Resolution |
 |---|---|---|---|
-| Cricket | [IPL Match — YouTube](https://www.youtube.com/watch?v=REPLACE_WITH_YOUR_VIDEO_ID) | ~90 sec | 1080p |
+| Cricket | [IPL Match — YouTube](https://youtu.be/-aPONfxjk_4?si=8gtDtEo65zPaRvLFs) | ~90 sec | 1080p |
 
 > All content used is publicly accessible. Downloaded for research/evaluation purposes only using `yt-dlp`.
 
@@ -148,7 +148,7 @@ python -c "import torch; print(torch.cuda.is_available())"
 ```bash
 pip install yt-dlp
 yt-dlp -f "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080]" \
-  "https://www.youtube.com/watch?v=REPLACE_WITH_YOUR_VIDEO_ID" \
+  "https://youtu.be/-aPONfxjk_4?si=8gtDtEo65zPaRvLF" \
   -o "data/cricket/source_video.%(ext)s"
 ```
 
