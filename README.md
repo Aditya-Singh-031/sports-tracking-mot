@@ -292,7 +292,7 @@ ByteTrack was retained for comparison (required by the assignment). It runs ~2×
 ## 🎥 Demo Video
 
 > A 3–5 minute walkthrough covering the pipeline, output video, Streamlit app, and technical choices.  
-> 📹 [Link to be added after recording]
+> 📹 [Watch Demo Video](https://youtu.be/zNwC7Oy77m0)
 
 ---
 
